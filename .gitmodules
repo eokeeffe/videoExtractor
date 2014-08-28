@@ -1,0 +1,3 @@
+[submodule "pexif"]
+	path = pexif
+	url = https://github.com/bennoleslie/pexif.git
