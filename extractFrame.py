@@ -7,7 +7,7 @@
 
 import cv
 import sys
-import pexif
+from gi.repository import GExiv2
 import argparse
 import re
 
@@ -44,8 +44,17 @@ parser.add_argument('-cm', action="store",
 
 args = parser.parse_args()
 
-capture_step = int(capture_step)
+capture_step = int(args.capture_step)
 if capture_step < 1: capture_step = 1
+
+tf = ''.join(args.files)
+files = []
+for f in tf.split(' '):
+    files.append(f.split(','))
+focal_length = args.focal_length
+apeture_value = args.apeture_value
+camera_model = args.camera_model
+camera_brand = args.camera_brand
 
 # N = F/D
 # N = f number
@@ -69,6 +78,9 @@ def check_focal_value(val):
     return False
 
 
+files = [item for sublist in files for item in sublist]
+print files
+
 for f in files:
     capture = cv.CaptureFromFile(f)
 
@@ -78,6 +90,8 @@ for f in files:
     frame_count =  cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FRAME_COUNT)
     codec = cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FOURCC)
 
+    print "Starting work on %s now" % f
+
     if capture_step > frame_count: frame_count = frame_count - 1
 
     for i in xrange(int(frame_count)):
@@ -86,15 +100,12 @@ for f in files:
             sys.stdout.write('saving frame:%s\r'%i)
             sys.stdout.flush()
             cv.SaveImage("%s.jpg"%(i), frame)
-            img = pexif.JpegFile.fromFile("%s.jpg"%(i))
-            
-            img.exif.primary.ImageWidth = width
-            img.exif.primary.ImageHeight = height
+           
+            exif = GExiv2.Metadata("%s.jpg"%(i))
 
-            img.exif.primary.Make = camera_brand
-            img.exif.primary.Model = camera_model
-            
-            img.exif.primary.ApertureValue = apeture_value
-            img.exif.primary.FocalLength = focal_length
+            exif[''] = "SEQ#%s"%i
+            # "https://github.com/eokeeffe/videoExtractor"
+            # camera_brand
+            # camera_model
 
-            img.writeFile("%s.jpg"%(i))
+            exif.save_file()
