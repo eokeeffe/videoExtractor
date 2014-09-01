@@ -7,7 +7,10 @@
 
 import cv
 from gi.repository import GExiv2
+from fractions import Fraction
 import argparse,re,time,os,sys
+import random,math
+
 
 parser = argparse.ArgumentParser(description='Program transforms video into seperate images for use in visual SFM')
 
@@ -111,6 +114,14 @@ for f in files:
 
     if capture_step > frame_count: frame_count = frame_count - 1
 
+    ISOSPEEDS = [64, 100, 200, 250, 320, 400, 640, 800, 1000, 1600, 3200]
+    SHUTTERSPEEDS = [15, 30, 60, 125, 250, 400, 500, 1000, 1250, 1600, 2000, 4000]
+    FSTOPS = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3.2, 3.4, 3.7, 4, 4.4, 4.8, 5.2, 5.6, 6.2, 6.7, 7.3, 8, 8.7, 9.5, 10, 11, 12, 14, 15, 16, 17, 19, 21, 22]
+    
+    flash = [0x00, 0x1, 0x18, 0x19, 0x49, 0x4d, 0x4f, 0x49, 0x4d, 0x4f]
+    aperture = Fraction(random.uniform(1.0, 16.0)).limit_denominator(2000)
+    exposure = Fraction(1.0/round(random.randint(8, int(100.0*aperture))+1, -2)).limit_denominator(4000)
+    
     for i in xrange(int(frame_count)):
         frame = cv.QueryFrame(capture)
         if frame and (i % capture_step == 0):
@@ -123,18 +134,25 @@ for f in files:
             
             t = os.path.getctime(path)
             ctime = time.strftime('%d/%m/%Y %H:%M:%S', time.localtime(t))
-            exif['Exif.Image.DateTime'] = ctime
+
             exif['Exif.Image.ImageDescription'] = "SEQ#%s"%i
             exif['Exif.Image.Make'] = camera_brand
             exif['Exif.Image.Model'] = camera_model
+            exif['Exif.Image.DateTime'] = ctime
             exif['Exif.Image.Software'] = "https://github.com/eokeeffe/videoExtractor"
             
-            exif['Exif.Photo.Flash'] = "No, auto"
+            exif['Exif.Photo.UserComment'] = "awesomeness"
 
-            exif['Exif.Photo.FNumber'] = fnumber
-            exif['Exif.Photo.FocalLength'] = focal_length
-            exif['Exif.Photo.ExposureBiasValue'] = apeture_value
-            
+
+            exif['Exif.Photo.Flash'] = str(flash[0])
+            exif['Exif.Photo.FNumber'] = str(Fraction(math.pow(1.4142, aperture)).limit_denominator(2000))
+            exif['Exif.Photo.FocalLength'] = str(focal_length)
+            exif['Exif.Photo.ApertureValue'] = str(aperture)
+            exif['Exif.Photo.ExposureTime'] = str(exposure)
+            exif['Exif.Photo.ExposureBiasValue'] = "0 EV"
+            exif['Exif.Photo.ISOSpeedRatings'] = "50"
+            exif['Exif.Image.Orientation'] = str(0)
+
             # camera_brand
             # camera_model
 
