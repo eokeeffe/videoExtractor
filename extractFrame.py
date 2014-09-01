@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 
 #
-#  you'll require https://github.com/bennoleslie/pexif.git
+#  make sure to run install.sh before trying this script
 #  for exif data manipulation
 #
 
 import cv
-import sys
 from gi.repository import GExiv2
-import argparse
-import re
+import argparse,re,time,os,sys
 
 parser = argparse.ArgumentParser(description='Program transforms video into seperate images for use in visual SFM')
 
@@ -21,12 +19,17 @@ parser.add_argument('-n', action="store",
     help='use only nth image',  
     dest="capture_step", default=1)
 
+#camera focal number example f(1/8)
+parser.add_argument('-fnumber', action="store",
+    help='the focal number of the camera',  
+    dest="fnumber", default=None)
+
 #camera focal length example 43.0mm
-parser.add_argument('-f', action="store",
+parser.add_argument('-focal', action="store",
     help='the focal length of the camera',  
     dest="focal_length", default=None)
 
-#apeture value of the lens 4.62EV (f/5.0) 
+#aperture value of the lens 4.62EV (f/5.0) 
 parser.add_argument('-a', action="store",
     help='apeture value of the lens',  
     dest="apeture_value", default=None)
@@ -51,6 +54,8 @@ tf = ''.join(args.files)
 files = []
 for f in tf.split(' '):
     files.append(f.split(','))
+
+fnumber = args.fnumber
 focal_length = args.focal_length
 apeture_value = args.apeture_value
 camera_model = args.camera_model
@@ -77,9 +82,21 @@ def check_focal_value(val):
         return True
     return False
 
+def check_focal(val):
+    if(re.search("(m|M){2}",val)):
+        return val
+    else:
+        return str(val+"mm")
 
 files = [item for sublist in files for item in sublist]
-print files
+print "Converting files:",files
+
+print "values:"
+print "FNumber:",fnumber
+print "Focal Length:",focal_length
+print "Aperture Value:",apeture_value
+print "Camera Model:",camera_model
+print "Camera Brand:",camera_brand
 
 for f in files:
     capture = cv.CaptureFromFile(f)
@@ -99,12 +116,25 @@ for f in files:
         if frame and (i % capture_step == 0):
             sys.stdout.write('saving frame:%s\r'%i)
             sys.stdout.flush()
-            cv.SaveImage("%s.jpg"%(i), frame)
+            path = "%s.jpg"%(i)
+            cv.SaveImage(path, frame)
            
-            exif = GExiv2.Metadata("%s.jpg"%(i))
+            exif = GExiv2.Metadata(path)
+            
+            t = os.path.getctime(path)
+            ctime = time.strftime('%d/%m/%Y %H:%M:%S', time.localtime(t))
+            exif['Exif.Image.DateTime'] = ctime
+            exif['Exif.Image.ImageDescription'] = "SEQ#%s"%i
+            exif['Exif.Image.Make'] = camera_brand
+            exif['Exif.Image.Model'] = camera_model
+            exif['Exif.Image.Software'] = "https://github.com/eokeeffe/videoExtractor"
+            
+            exif['Exif.Photo.Flash'] = "No, auto"
 
-            exif[''] = "SEQ#%s"%i
-            # "https://github.com/eokeeffe/videoExtractor"
+            exif['Exif.Photo.FNumber'] = fnumber
+            exif['Exif.Photo.FocalLength'] = focal_length
+            exif['Exif.Photo.ExposureBiasValue'] = apeture_value
+            
             # camera_brand
             # camera_model
 
