@@ -118,7 +118,17 @@ for f in files:
     SHUTTERSPEEDS = [15, 30, 60, 125, 250, 400, 500, 1000, 1250, 1600, 2000, 4000]
     FSTOPS = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3.2, 3.4, 3.7, 4, 4.4, 4.8, 5.2, 5.6, 6.2, 6.7, 7.3, 8, 8.7, 9.5, 10, 11, 12, 14, 15, 16, 17, 19, 21, 22]
     
-    flash = [0x00, 0x1, 0x18, 0x19, 0x49, 0x4d, 0x4f, 0x49, 0x4d, 0x4f]
+    flash = [0x00,#No flash
+    0x1, 
+    0x18, 
+    0x19, 
+    0x49, 
+    0x4d, 
+    0x4f, 
+    0x49, 
+    0x4d, 
+    0x4f]
+
     aperture = Fraction(random.uniform(1.0, 16.0)).limit_denominator(2000)
     exposure = Fraction(1.0/round(random.randint(8, int(100.0*aperture))+1, -2)).limit_denominator(4000)
     
