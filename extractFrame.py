@@ -5,7 +5,7 @@
 #  for exif data manipulation
 #
 
-import cv
+import cv,cv2
 from gi.repository import GExiv2
 from fractions import Fraction
 import argparse,re,time,os,sys
@@ -102,13 +102,13 @@ print "Camera Model:",camera_model
 print "Camera Brand:",camera_brand
 
 for f in files:
-    capture = cv.CaptureFromFile(f)
+    capture = cv2.VideoCapture(f)
 
-    width = cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FRAME_WIDTH)
-    height = cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FRAME_HEIGHT)
-    fps = cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FPS)
-    frame_count =  cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FRAME_COUNT)
-    codec = cv.GetCaptureProperty(capture, cv.CV_CAP_PROP_FOURCC)
+    width = capture.get(cv.CV_CAP_PROP_FRAME_WIDTH)
+    height = capture.get(cv.CV_CAP_PROP_FRAME_HEIGHT)
+    fps = capture.get(cv.CV_CAP_PROP_FPS)
+    frame_count =  capture.get(cv.CV_CAP_PROP_FRAME_COUNT)
+    codec = capture.get(cv.CV_CAP_PROP_FOURCC)
 
     print "Starting work on %s now" % f
 
@@ -133,12 +133,13 @@ for f in files:
     exposure = Fraction(1.0/round(random.randint(8, int(100.0*aperture))+1, -2)).limit_denominator(4000)
     
     for i in xrange(int(frame_count)):
-        frame = cv.QueryFrame(capture)
-        if frame and (i % capture_step == 0):
+        ret, frame = capture.read()
+        if ret and (i % capture_step == 0):
             sys.stdout.write('saving frame:%s\r'%i)
             sys.stdout.flush()
             path = "%s.jpg"%(i)
-            cv.SaveImage(path, frame)
+            cv2.imwrite(path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
            
             exif = GExiv2.Metadata(path)
             
@@ -150,10 +151,9 @@ for f in files:
             exif['Exif.Image.Model'] = camera_model
             exif['Exif.Image.DateTime'] = ctime
             exif['Exif.Image.Software'] = "https://github.com/eokeeffe/videoExtractor"
-            
+            exif['Exif.Image.Orientation'] = str(0)
+
             exif['Exif.Photo.UserComment'] = "awesomeness"
-
-
             exif['Exif.Photo.Flash'] = str(flash[0])
             exif['Exif.Photo.FNumber'] = str(Fraction(math.pow(1.4142, aperture)).limit_denominator(2000))
             exif['Exif.Photo.FocalLength'] = str(focal_length)
@@ -161,9 +161,5 @@ for f in files:
             exif['Exif.Photo.ExposureTime'] = str(exposure)
             exif['Exif.Photo.ExposureBiasValue'] = "0 EV"
             exif['Exif.Photo.ISOSpeedRatings'] = "50"
-            exif['Exif.Image.Orientation'] = str(0)
-
-            # camera_brand
-            # camera_model
 
             exif.save_file()
