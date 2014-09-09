@@ -13,6 +13,10 @@ import random,math
 
 parser = argparse.ArgumentParser(description='Program transforms video into seperate images for use in visual SFM')
 
+parser.add_argument('-still', action="store",
+    help='file to read exif from,must be of the same camera', 
+    dest="still", default=None)
+
 parser.add_argument('-file', action="store",
     help='file to transform', 
     dest="files", default=None)
@@ -20,32 +24,6 @@ parser.add_argument('-file', action="store",
 parser.add_argument('-n', action="store",
     help='use only nth image',  
     dest="capture_step", default=1)
-
-#camera focal number example f(1/8)
-parser.add_argument('-fnumber', action="store",
-    help='the focal number of the camera',  
-    dest="fnumber", default=None)
-
-#camera focal length example 43.0mm
-parser.add_argument('-focal', action="store",
-    help='the focal length of the camera',  
-    dest="focal_length", default=None)
-
-#aperture value of the lens 4.62EV (f/5.0) 
-parser.add_argument('-a', action="store",
-    help='apeture value of the lens',  
-    dest="apeture_value", default=None)
-
-#camera brand name
-parser.add_argument('-cb', action="store",
-    help='camera brand name', 
-    dest="camera_brand", default=None)
-
-#camera brand model
-parser.add_argument('-cm', action="store",
-    help='camera model',  
-    dest="camera_model", default=None)
-
 
 args = parser.parse_args()
 
@@ -57,48 +35,23 @@ files = []
 for f in tf.split(' '):
     files.append(f.split(','))
 
-fnumber = args.fnumber
-focal_length = args.focal_length
-apeture_value = args.apeture_value
-camera_model = args.camera_model
-camera_brand = args.camera_brand
-
 # N = F/D
 # N = f number
 # F = focal lenght
 # D = diameter of lens
 
-def check_apeture_value(val):
-    # check if apeture value is ok
-    # example input should be
-    # 5.00EV (f/2.8)
-    if re.search('%d/.%dEV /(f/%d/)',val):
-        return True
-    return False
-
-def check_focal_value(val):
-    # check if focal value is ok
-    # example input should be
-    # 49.00 mm
-    if re.search('%d/.%d mm',val):
-        return True
-    return False
-
-def check_focal(val):
-    if(re.search("(m|M){2}",val)):
-        return val
-    else:
-        return str(val+"mm")
-
 files = [item for sublist in files for item in sublist]
 print "Converting files:",files
 
+exif1 = GExiv2.Metadata(args.still)
+
+print "Using file:%s as exif data input"%args.still
 print "values:"
-print "FNumber:",fnumber
-print "Focal Length:",focal_length
-print "Aperture Value:",apeture_value
-print "Camera Model:",camera_model
-print "Camera Brand:",camera_brand
+print "FNumber:",exif1['Exif.Photo.FNumber']
+print "Focal Length:",exif1['Exif.Photo.FocalLength']
+print "Aperture Value:",exif1['Exif.Photo.ApertureValue']
+print "Camera Model:",exif1['Exif.Image.Model']
+print "Camera Brand:",exif1['Exif.Image.Make']
 
 for f in files:
     capture = cv2.VideoCapture(f)
@@ -152,19 +105,19 @@ for f in files:
             ctime = time.strftime('%d/%m/%Y %H:%M:%S', time.localtime(t))
 
             exif['Exif.Image.ImageDescription'] = "SEQ#%s"%i
-            exif['Exif.Image.Make'] = camera_brand
-            exif['Exif.Image.Model'] = camera_model
+            exif['Exif.Image.Make'] = exif1['Exif.Image.Make']
+            exif['Exif.Image.Model'] = exif1['Exif.Image.Model']
             exif['Exif.Image.DateTime'] = ctime
             exif['Exif.Image.Software'] = "https://github.com/eokeeffe/videoExtractor"
-            exif['Exif.Image.Orientation'] = str(0)
+            exif['Exif.Image.Orientation'] = exif1['Exif.Image.Orientation']
 
             exif['Exif.Photo.UserComment'] = "awesomeness"
-            exif['Exif.Photo.Flash'] = str(flash[0])
-            exif['Exif.Photo.FNumber'] = str(Fraction(math.pow(1.4142, aperture)).limit_denominator(2000))
-            exif['Exif.Photo.FocalLength'] = str(focal_length)
-            exif['Exif.Photo.ApertureValue'] = str(apeture_value)
-            exif['Exif.Photo.ExposureTime'] = str(exposure)
-            exif['Exif.Photo.ExposureBiasValue'] = "0 EV"
-            exif['Exif.Photo.ISOSpeedRatings'] = "50"
+            exif['Exif.Photo.Flash'] = exif1['Exif.Photo.Flash']
+            exif['Exif.Photo.FNumber'] = exif1['Exif.Photo.FNumber']
+            exif['Exif.Photo.FocalLength'] = exif1['Exif.Photo.FocalLength']
+            exif['Exif.Photo.ApertureValue'] = exif1['Exif.Photo.ApertureValue']
+            exif['Exif.Photo.ExposureTime'] = exif1['Exif.Photo.ExposureTime']
+            exif['Exif.Photo.ExposureBiasValue'] = exif1['Exif.Photo.ExposureBiasValue']
+            exif['Exif.Photo.ISOSpeedRatings'] = exif1['Exif.Photo.ISOSpeedRatings']
 
             exif.save_file()
